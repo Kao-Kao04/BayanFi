@@ -15,6 +15,7 @@ import { Navbar } from '@/components/layout/navbar';
 import { StatCard } from '@/components/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { OnChainVerify } from '@/components/onchain-verify';
 import { formatAmount, formatNumber, utilization } from '@/lib/utils';
 import {
   usePublicStats,
@@ -123,6 +124,7 @@ export default function TransparencyPage() {
                     <span>{formatAmount(p.distributedAmount, p.budgetAsset)} distributed</span>
                     <span>{formatAmount(p.remainingAmount, p.budgetAsset)} remaining</span>
                   </div>
+                  <OnChainVerify programId={p.id} />
                 </div>
               ))}
               {(!programs || programs.length === 0) && (
