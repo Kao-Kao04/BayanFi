@@ -9,12 +9,25 @@ import { PrismaClient, UserRole, OrganizationType, OrganizationStatus, Organizat
 import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
+import { Keypair } from 'stellar-sdk';
 
 // Load the root .env (three levels up from apps/backend/prisma) so the seed
 // works regardless of the cwd it is invoked from.
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
+
+/** Generates a Stellar keypair and funds it on testnet via Friendbot so the
+ *  organization has a real, explorer-verifiable on-chain funding wallet. */
+async function provisionOnChainWallet(): Promise<string | null> {
+  try {
+    const kp = Keypair.random();
+    const res = await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(kp.publicKey())}`);
+    return res.ok ? kp.publicKey() : null;
+  } catch {
+    return null;
+  }
+}
 
 async function main() {
   console.log('Seeding BayanFi database...');
@@ -56,6 +69,7 @@ async function main() {
     where: { registrationNumber: 'GOV-2026-DSWD' },
   });
   if (!org) {
+    const stellarPublicKey = await provisionOnChainWallet();
     org = await prisma.organization.create({
       data: {
         name: 'Department of Social Welfare and Development',
@@ -64,11 +78,21 @@ async function main() {
         contactEmail: 'contact@dswd.gov.ph',
         status: OrganizationStatus.VERIFIED,
         verifiedAt: new Date(),
+        stellarPublicKey,
         members: {
           create: [{ userId: orgAdmin.id, role: OrganizationMemberRole.ADMIN }],
         },
       },
     });
+  } else if (!org.stellarPublicKey) {
+    // Backfill an on-chain wallet for an org seeded before this change.
+    const stellarPublicKey = await provisionOnChainWallet();
+    if (stellarPublicKey) {
+      org = await prisma.organization.update({
+        where: { id: org.id },
+        data: { stellarPublicKey },
+      });
+    }
   }
 
   // --- Programs (idempotent: only seed if this org has none) ---
