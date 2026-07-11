@@ -1,0 +1,65 @@
+{
+  "name": "bayanfi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Transparent Public Money. Powered by Stellar.",
+  "keywords": [
+    "stellar",
+    "blockchain",
+    "financial-inclusion",
+    "public-finance",
+    "government-tech",
+    "disaster-relief",
+    "transparency"
+  ],
+  "author": "BayanFi Team",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:web\" \"npm run dev:backend\" \"npm run dev:ai\"",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "dev:backend": "npm run dev --workspace=apps/backend",
+    "dev:ai": "cd apps/ai-service && python -m uvicorn main:app --reload --port 8000",
+    "build": "turbo run build",
+    "build:web": "npm run build --workspace=apps/web",
+    "build:backend": "npm run build --workspace=apps/backend",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "lint": "turbo run lint",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "check:env": "node scripts/check-env.js",
+    "db:generate": "prisma generate --schema=apps/backend/prisma/schema.prisma",
+    "db:push": "node scripts/check-env.js && prisma db push --schema=apps/backend/prisma/schema.prisma",
+    "db:migrate": "node scripts/check-env.js && prisma db push --schema=apps/backend/prisma/schema.prisma",
+    "db:migrate:deploy": "prisma migrate deploy --schema=apps/backend/prisma/schema.prisma",
+    "db:studio": "prisma studio --schema=apps/backend/prisma/schema.prisma",
+    "db:seed": "node scripts/check-env.js && prisma db seed --schema=apps/backend/prisma/schema.prisma",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:build": "docker compose build",
+    "stellar:setup": "node scripts/stellar-setup.js",
+    "prepare": "husky install || true"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "concurrently": "^8.2.2",
+    "husky": "^8.0.3",
+    "prettier": "^3.1.0",
+    "stellar-sdk": "^11.1.0",
+    "turbo": "^1.11.0",
+    "typescript": "^5.3.3"
+  },
+  "prisma": {
+    "seed": "ts-node --compiler-options {\"module\":\"commonjs\"} apps/backend/prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "dependencies": {
+    "pino-pretty": "^13.1.3"
+  }
+}

@@ -1,0 +1,689 @@
+// BayanFi Database Schema
+// Prisma ORM Schema Definition
+// PostgreSQL 15+
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ORG_ADMIN
+  STAFF
+  AUDITOR
+  MERCHANT
+  BENEFICIARY
+}
+
+enum OrganizationType {
+  GOVERNMENT
+  NGO
+  UNIVERSITY
+  FOUNDATION
+  DISASTER_RELIEF
+}
+
+enum OrganizationStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REJECTED
+}
+
+enum OrganizationMemberRole {
+  ADMIN
+  MANAGER
+  STAFF
+  VIEWER
+}
+
+enum ProgramType {
+  SCHOLARSHIP
+  MEDICAL
+  DISASTER_RELIEF
+  LIVELIHOOD
+  SENIOR_CITIZEN
+  PWD
+  EMERGENCY_CASH
+  EDUCATION_VOUCHER
+  FARMER_SUBSIDY
+  CASH_FOR_WORK
+}
+
+
+enum ProgramStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+enum ApprovalWorkflow {
+  AUTOMATIC
+  SINGLE_APPROVAL
+  MULTI_APPROVAL
+}
+
+enum ApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  DISBURSED
+  CANCELLED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+  PREFER_NOT_TO_SAY
+}
+
+enum CivilStatus {
+  SINGLE
+  MARRIED
+  WIDOWED
+  SEPARATED
+}
+
+enum BeneficiaryStatus {
+  ACTIVE
+  SUSPENDED
+  BLACKLISTED
+}
+
+enum WalletType {
+  CUSTODIAL
+  NON_CUSTODIAL
+}
+
+enum WalletStatus {
+  ACTIVE
+  SUSPENDED
+  CLOSED
+}
+
+enum TransactionType {
+  DISBURSEMENT
+  PAYMENT
+  REFUND
+  TRANSFER
+}
+
+enum TransactionStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+
+enum MerchantCategory {
+  GROCERY
+  PHARMACY
+  RESTAURANT
+  RETAIL
+  EDUCATION
+  HEALTHCARE
+  TRANSPORTATION
+  OTHER
+}
+
+enum MerchantStatus {
+  PENDING
+  VERIFIED
+  ACTIVE
+  SUSPENDED
+  REJECTED
+}
+
+enum AnalysisType {
+  DUPLICATE_DETECTION
+  FRAUD_DETECTION
+  DOCUMENT_VERIFICATION
+  ANOMALY_DETECTION
+  ELIGIBILITY_PREDICTION
+}
+
+enum AnalysisResult {
+  PASS
+  FAIL
+  REVIEW_REQUIRED
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  SMS
+  PUSH
+}
+
+enum SettingScope {
+  SYSTEM
+  ORGANIZATION
+}
+
+// ============================================================
+// MODELS
+// ============================================================
+
+model User {
+  id                    String    @id @default(uuid()) @db.Uuid
+  email                 String    @unique @db.VarChar(255)
+  passwordHash          String?   @map("password_hash") @db.VarChar(255)
+  role                  UserRole
+  stellarPublicKey      String?   @unique @map("stellar_public_key") @db.VarChar(56)
+  phone                 String?   @db.VarChar(20)
+  isEmailVerified       Boolean   @default(false) @map("is_email_verified")
+  isPhoneVerified       Boolean   @default(false) @map("is_phone_verified")
+  mfaEnabled            Boolean   @default(false) @map("mfa_enabled")
+  mfaSecret             String?   @map("mfa_secret") @db.VarChar(255)
+  lastLoginAt           DateTime? @map("last_login_at")
+  loginAttempts         Int       @default(0) @map("login_attempts")
+  lockedUntil           DateTime? @map("locked_until")
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+  deletedAt             DateTime? @map("deleted_at")
+
+  // Relations
+  beneficiary           Beneficiary?
+  merchant              Merchant?
+  wallets               Wallet[]
+  sessions              Session[]
+  organizationMembers   OrganizationMember[]
+  membershipInvites     OrganizationMember[] @relation("MemberInviter")
+  programsCreated       Program[] @relation("ProgramCreator")
+  applicationsReviewed  Application[] @relation("ApplicationReviewer")
+  applicationsApproved  Application[] @relation("ApplicationApprover")
+  documentsVerified     Document[] @relation("DocumentVerifier")
+  organizationsVerified Organization[] @relation("OrganizationVerifier")
+  merchantsVerified     Merchant[] @relation("MerchantVerifier")
+  aiAnalysesReviewed    AIAnalysis[] @relation("AIAnalysisReviewer")
+  auditLogs             AuditLog[]
+  notifications         Notification[]
+  settingsUpdated       Setting[]
+
+  @@index([email])
+  @@index([stellarPublicKey])
+  @@index([role])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+
+model Organization {
+  id                  String              @id @default(uuid()) @db.Uuid
+  name                String              @db.VarChar(255)
+  type                OrganizationType
+  registrationNumber  String?             @map("registration_number") @db.VarChar(100)
+  description         String?             @db.Text
+  website             String?             @db.VarChar(255)
+  logoUrl             String?             @map("logo_url") @db.VarChar(500)
+  contactEmail        String              @map("contact_email") @db.VarChar(255)
+  contactPhone        String?             @map("contact_phone") @db.VarChar(20)
+  address             Json?
+  status              OrganizationStatus  @default(PENDING)
+  verifiedAt          DateTime?           @map("verified_at")
+  verifiedById        String?             @map("verified_by") @db.Uuid
+  stellarPublicKey    String?             @unique @map("stellar_public_key") @db.VarChar(56)
+  metadata            Json                @default("{}")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  deletedAt           DateTime?           @map("deleted_at")
+
+  // Relations
+  verifiedBy          User?               @relation("OrganizationVerifier", fields: [verifiedById], references: [id])
+  members             OrganizationMember[]
+  programs            Program[]
+  settings            Setting[]
+
+  @@index([status])
+  @@index([type])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id              String                  @id @default(uuid()) @db.Uuid
+  organizationId  String                  @map("organization_id") @db.Uuid
+  userId          String                  @map("user_id") @db.Uuid
+  role            OrganizationMemberRole
+  permissions     Json                    @default("[]")
+  invitedById     String?                 @map("invited_by") @db.Uuid
+  joinedAt        DateTime                @default(now()) @map("joined_at")
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+  deletedAt       DateTime?               @map("deleted_at")
+
+  // Relations
+  organization    Organization            @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user            User                    @relation(fields: [userId], references: [id])
+  invitedBy       User?                   @relation("MemberInviter", fields: [invitedById], references: [id])
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@index([organizationId, userId, deletedAt])
+  @@map("organization_members")
+}
+
+
+model Program {
+  id                        String            @id @default(uuid()) @db.Uuid
+  organizationId            String            @map("organization_id") @db.Uuid
+  name                      String            @db.VarChar(255)
+  type                      ProgramType
+  description               String?           @db.Text
+  budgetAmount              Decimal           @map("budget_amount") @db.Decimal(20, 7)
+  budgetAsset               String            @default("USDC") @map("budget_asset") @db.VarChar(12)
+  distributedAmount         Decimal           @default(0) @map("distributed_amount") @db.Decimal(20, 7)
+  maxAmountPerBeneficiary   Decimal?          @map("max_amount_per_beneficiary") @db.Decimal(20, 7)
+  startDate                 DateTime          @map("start_date") @db.Date
+  endDate                   DateTime?         @map("end_date") @db.Date
+  eligibilityCriteria       Json              @default("{}") @map("eligibility_criteria")
+  requiredDocuments         Json              @default("[]") @map("required_documents")
+  approvalWorkflow          ApprovalWorkflow  @default(SINGLE_APPROVAL) @map("approval_workflow")
+  spendingRestrictions      Json              @default("{}") @map("spending_restrictions")
+  status                    ProgramStatus     @default(DRAFT)
+  stellarIssuerPublicKey    String?           @map("stellar_issuer_public_key") @db.VarChar(56)
+  stellarDistributionKey    String?           @map("stellar_distribution_key") @db.VarChar(56)
+  isEmergency               Boolean           @default(false) @map("is_emergency")
+  geographicScope           Json?             @map("geographic_scope")
+  metadata                  Json              @default("{}")
+  createdById               String            @map("created_by") @db.Uuid
+  createdAt                 DateTime          @default(now()) @map("created_at")
+  updatedAt                 DateTime          @updatedAt @map("updated_at")
+  deletedAt                 DateTime?         @map("deleted_at")
+
+  // Relations
+  organization              Organization      @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  createdBy                 User              @relation("ProgramCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  applications              Application[]
+  transactions              Transaction[]
+
+  @@index([organizationId])
+  @@index([type])
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("programs")
+}
+
+model Beneficiary {
+  id                String              @id @default(uuid()) @db.Uuid
+  userId            String              @unique @map("user_id") @db.Uuid
+  firstName         String              @map("first_name") @db.VarChar(100)
+  middleName        String?             @map("middle_name") @db.VarChar(100)
+  lastName          String              @map("last_name") @db.VarChar(100)
+  suffix            String?             @db.VarChar(10)
+  dateOfBirth       DateTime            @map("date_of_birth") @db.Date
+  gender            Gender?
+  civilStatus       CivilStatus?        @map("civil_status")
+  nationalId        String?             @map("national_id") @db.VarChar(50)
+  nationalIdType    String?             @map("national_id_type") @db.VarChar(50)
+  addressLine1      String              @map("address_line1") @db.VarChar(255)
+  addressLine2      String?             @map("address_line2") @db.VarChar(255)
+  barangay          String?             @db.VarChar(100)
+  city              String              @db.VarChar(100)
+  province          String              @db.VarChar(100)
+  region            String              @db.VarChar(100)
+  postalCode        String?             @map("postal_code") @db.VarChar(20)
+  country           String              @default("PH") @db.Char(2)
+  coordinates       String?             @db.Text // PostGIS POINT
+  isPwd             Boolean             @default(false) @map("is_pwd")
+  isSenior          Boolean             @default(false) @map("is_senior")
+  isIndigenous      Boolean             @default(false) @map("is_indigenous")
+  householdSize     Int?                @map("household_size")
+  monthlyIncome     Decimal?            @map("monthly_income") @db.Decimal(12, 2)
+  occupation        String?             @db.VarChar(100)
+  biometricHash     String?             @map("biometric_hash") @db.VarChar(255)
+  photoUrl          String?             @map("photo_url") @db.VarChar(500)
+  status            BeneficiaryStatus   @default(ACTIVE)
+  metadata          Json                @default("{}")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  deletedAt         DateTime?           @map("deleted_at")
+
+  // Relations
+  user              User                @relation(fields: [userId], references: [id])
+  applications      Application[]
+
+  @@index([userId])
+  @@index([lastName, firstName])
+  @@index([region, province, city])
+  @@index([dateOfBirth])
+  @@index([status])
+  @@index([isPwd, isSenior, isIndigenous])
+  @@map("beneficiaries")
+}
+
+
+model Application {
+  id                    String              @id @default(uuid()) @db.Uuid
+  programId             String              @map("program_id") @db.Uuid
+  beneficiaryId         String              @map("beneficiary_id") @db.Uuid
+  status                ApplicationStatus   @default(DRAFT)
+  requestedAmount       Decimal?            @map("requested_amount") @db.Decimal(20, 7)
+  approvedAmount        Decimal?            @map("approved_amount") @db.Decimal(20, 7)
+  rejectionReason       String?             @map("rejection_reason") @db.Text
+  purpose               String?             @db.Text
+  riskScore             Decimal?            @map("risk_score") @db.Decimal(5, 2)
+  eligibilityScore      Decimal?            @map("eligibility_score") @db.Decimal(5, 2)
+  duplicateCheckPassed  Boolean?            @map("duplicate_check_passed")
+  fraudCheckPassed      Boolean?            @map("fraud_check_passed")
+  flags                 Json                @default("[]")
+  submittedAt           DateTime?           @map("submitted_at")
+  reviewedById          String?             @map("reviewed_by") @db.Uuid
+  reviewedAt            DateTime?           @map("reviewed_at")
+  approvedById          String?             @map("approved_by") @db.Uuid
+  approvedAt            DateTime?           @map("approved_at")
+  disbursedAt           DateTime?           @map("disbursed_at")
+  disbursementTxHash    String?             @map("disbursement_tx_hash") @db.VarChar(64)
+  metadata              Json                @default("{}")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+  deletedAt             DateTime?           @map("deleted_at")
+
+  // Relations
+  program               Program             @relation(fields: [programId], references: [id])
+  beneficiary           Beneficiary         @relation(fields: [beneficiaryId], references: [id], onDelete: Cascade)
+  reviewedBy            User?               @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  approvedBy            User?               @relation("ApplicationApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  documents             Document[]
+  transactions          Transaction[]
+
+  @@index([programId])
+  @@index([beneficiaryId])
+  @@index([status])
+  @@index([submittedAt])
+  @@index([programId, beneficiaryId])
+  @@map("applications")
+}
+
+model Document {
+  id                      String    @id @default(uuid()) @db.Uuid
+  applicationId           String    @map("application_id") @db.Uuid
+  documentType            String    @map("document_type") @db.VarChar(50)
+  fileName                String    @map("file_name") @db.VarChar(255)
+  fileUrl                 String    @map("file_url") @db.VarChar(500)
+  fileSize                Int       @map("file_size")
+  mimeType                String    @map("mime_type") @db.VarChar(100)
+  isVerified              Boolean   @default(false) @map("is_verified")
+  aiVerificationScore     Decimal?  @map("ai_verification_score") @db.Decimal(5, 2)
+  aiVerificationResult    Json?     @map("ai_verification_result")
+  verifiedById            String?   @map("verified_by") @db.Uuid
+  verifiedAt              DateTime? @map("verified_at")
+  metadata                Json      @default("{}")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+  deletedAt               DateTime? @map("deleted_at")
+
+  // Relations
+  application             Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  verifiedBy              User?       @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([applicationId])
+  @@index([documentType])
+  @@map("documents")
+}
+
+model Wallet {
+  id                    String        @id @default(uuid()) @db.Uuid
+  userId                String        @map("user_id") @db.Uuid
+  publicKey             String        @unique @map("public_key") @db.VarChar(56)
+  encryptedSecretKey    String?       @map("encrypted_secret_key") @db.Text
+  walletType            WalletType    @default(CUSTODIAL) @map("wallet_type")
+  isPrimary             Boolean       @default(true) @map("is_primary")
+  label                 String?       @db.VarChar(100)
+  balanceXlm            Decimal       @default(0) @map("balance_xlm") @db.Decimal(20, 7)
+  balanceUsdc           Decimal       @default(0) @map("balance_usdc") @db.Decimal(20, 7)
+  balances              Json          @default("{}")
+  lastSyncedAt          DateTime?     @map("last_synced_at")
+  isFunded              Boolean       @default(false) @map("is_funded")
+  status                WalletStatus  @default(ACTIVE)
+  metadata              Json          @default("{}")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+  deletedAt             DateTime?     @map("deleted_at")
+
+  // Relations
+  user                  User          @relation(fields: [userId], references: [id])
+  transactionsFrom      Transaction[] @relation("TransactionFrom")
+  transactionsTo        Transaction[] @relation("TransactionTo")
+  merchants             Merchant[]
+
+  @@index([userId])
+  @@index([publicKey])
+  @@index([status])
+  @@map("wallets")
+}
+
+
+model Transaction {
+  id                  String              @id @default(uuid()) @db.Uuid
+  fromWalletId        String              @map("from_wallet_id") @db.Uuid
+  toWalletId          String              @map("to_wallet_id") @db.Uuid
+  programId           String?             @map("program_id") @db.Uuid
+  applicationId       String?             @map("application_id") @db.Uuid
+  transactionType     TransactionType     @map("transaction_type")
+  amount              Decimal             @db.Decimal(20, 7)
+  assetCode           String              @map("asset_code") @db.VarChar(12)
+  assetIssuer         String?             @map("asset_issuer") @db.VarChar(56)
+  fee                 Decimal             @default(0) @db.Decimal(20, 7)
+  memo                String?             @db.Text
+  stellarTxHash       String              @unique @map("stellar_tx_hash") @db.VarChar(64)
+  stellarLedger       Int?                @map("stellar_ledger")
+  status              TransactionStatus   @default(PENDING)
+  failureReason       String?             @map("failure_reason") @db.Text
+  merchantId          String?             @map("merchant_id") @db.Uuid
+  metadata            Json                @default("{}")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+
+  // Relations
+  fromWallet          Wallet              @relation("TransactionFrom", fields: [fromWalletId], references: [id], onDelete: Restrict)
+  toWallet            Wallet              @relation("TransactionTo", fields: [toWalletId], references: [id], onDelete: Restrict)
+  program             Program?            @relation(fields: [programId], references: [id])
+  application         Application?        @relation(fields: [applicationId], references: [id])
+  merchant            Merchant?           @relation(fields: [merchantId], references: [id])
+
+  @@index([fromWalletId])
+  @@index([toWalletId])
+  @@index([programId])
+  @@index([applicationId])
+  @@index([transactionType])
+  @@index([status])
+  @@index([stellarTxHash])
+  @@index([createdAt(sort: Desc)])
+  @@map("transactions")
+}
+
+model Merchant {
+  id                  String            @id @default(uuid()) @db.Uuid
+  userId              String            @unique @map("user_id") @db.Uuid
+  businessName        String            @map("business_name") @db.VarChar(255)
+  tradeName           String?           @map("trade_name") @db.VarChar(255)
+  registrationNumber  String?           @map("registration_number") @db.VarChar(100)
+  taxId               String?           @map("tax_id") @db.VarChar(50)
+  category            MerchantCategory
+  description         String?           @db.Text
+  logoUrl             String?           @map("logo_url") @db.VarChar(500)
+  addressLine1        String            @map("address_line1") @db.VarChar(255)
+  addressLine2        String?           @map("address_line2") @db.VarChar(255)
+  barangay            String?           @db.VarChar(100)
+  city                String            @db.VarChar(100)
+  province            String            @db.VarChar(100)
+  region              String            @db.VarChar(100)
+  postalCode          String?           @map("postal_code") @db.VarChar(20)
+  country             String            @default("PH") @db.Char(2)
+  coordinates         String?           @db.Text
+  contactPerson       String?           @map("contact_person") @db.VarChar(100)
+  contactPhone        String?           @map("contact_phone") @db.VarChar(20)
+  contactEmail        String?           @map("contact_email") @db.VarChar(255)
+  walletId            String?           @map("wallet_id") @db.Uuid
+  qrCodeUrl           String?           @map("qr_code_url") @db.VarChar(500)
+  status              MerchantStatus    @default(PENDING)
+  verifiedAt          DateTime?         @map("verified_at")
+  verifiedById        String?           @map("verified_by") @db.Uuid
+  totalSales          Decimal           @default(0) @map("total_sales") @db.Decimal(20, 7)
+  totalTransactions   Int               @default(0) @map("total_transactions")
+  metadata            Json              @default("{}")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+  deletedAt           DateTime?         @map("deleted_at")
+
+  // Relations
+  user                User              @relation(fields: [userId], references: [id])
+  wallet              Wallet?           @relation(fields: [walletId], references: [id])
+  verifiedBy          User?             @relation("MerchantVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  transactions        Transaction[]
+
+  @@index([userId])
+  @@index([category])
+  @@index([status])
+  @@index([region, province, city])
+  @@index([businessName(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("merchants")
+}
+
+
+model AIAnalysis {
+  id                String          @id @default(uuid()) @db.Uuid
+  targetId          String          @map("target_id") @db.Uuid
+  targetType        String          @map("target_type") @db.VarChar(50)
+  analysisType      AnalysisType    @map("analysis_type")
+  modelName         String          @map("model_name") @db.VarChar(100)
+  modelVersion      String          @map("model_version") @db.VarChar(20)
+  score             Decimal         @db.Decimal(5, 2)
+  result            AnalysisResult
+  details           Json
+  explanation       String?         @db.Text
+  flags             Json            @default("[]")
+  processingTimeMs  Int?            @map("processing_time_ms")
+  reviewedById      String?         @map("reviewed_by") @db.Uuid
+  reviewDecision    String?         @map("review_decision") @db.VarChar(50)
+  reviewedAt        DateTime?       @map("reviewed_at")
+  metadata          Json            @default("{}")
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  // Relations
+  reviewedBy        User?           @relation("AIAnalysisReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId])
+  @@index([analysisType])
+  @@index([result])
+  @@index([createdAt(sort: Desc)])
+  @@map("ai_analyses")
+}
+
+model AuditLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  userId        String?   @map("user_id") @db.Uuid
+  action        String    @db.VarChar(100)
+  entityType    String    @map("entity_type") @db.VarChar(50)
+  entityId      String?   @map("entity_id") @db.Uuid
+  changes       Json?
+  ipAddress     String?   @map("ip_address") @db.Inet
+  userAgent     String?   @map("user_agent") @db.Text
+  requestId     String?   @map("request_id") @db.Uuid
+  status        String    @db.VarChar(20)
+  errorMessage  String?   @map("error_message") @db.Text
+  metadata      Json      @default("{}")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt(sort: Desc)])
+  @@index([action])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id            String                @id @default(uuid()) @db.Uuid
+  userId        String                @map("user_id") @db.Uuid
+  type          String                @db.VarChar(50)
+  title         String                @db.VarChar(255)
+  message       String                @db.Text
+  link          String?               @db.VarChar(500)
+  priority      NotificationPriority  @default(NORMAL)
+  channel       NotificationChannel   @default(IN_APP)
+  isRead        Boolean               @default(false) @map("is_read")
+  readAt        DateTime?             @map("read_at")
+  sentAt        DateTime?             @map("sent_at")
+  metadata      Json                  @default("{}")
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  // Relations
+  user          User                  @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt(sort: Desc)])
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+model Session {
+  id                  String    @id @default(uuid()) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  refreshTokenHash    String    @unique @map("refresh_token_hash") @db.VarChar(255)
+  deviceInfo          Json?     @map("device_info")
+  ipAddress           String?   @map("ip_address") @db.Inet
+  userAgent           String?   @map("user_agent") @db.Text
+  expiresAt           DateTime  @map("expires_at")
+  lastUsedAt          DateTime  @default(now()) @map("last_used_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user                User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([refreshTokenHash])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Setting {
+  id            String        @id @default(uuid()) @db.Uuid
+  scope         SettingScope
+  scopeId       String?       @map("scope_id") @db.Uuid
+  key           String        @db.VarChar(100)
+  value         Json
+  description   String?       @db.Text
+  isEncrypted   Boolean       @default(false) @map("is_encrypted")
+  updatedById   String?       @map("updated_by") @db.Uuid
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  organization  Organization? @relation(fields: [scopeId], references: [id])
+  updatedBy     User?         @relation(fields: [updatedById], references: [id])
+
+  @@unique([scope, scopeId, key])
+  @@index([scope, scopeId])
+  @@index([key])
+  @@map("settings")
+}
