@@ -108,6 +108,18 @@ All use password **`BayanFi@2026`**:
 - **Next:** PHP anchor (SEP-24/31) cash-out, PhilSys identity verification, Soroban escrow in the disbursement path, mobile-first + SMS/USSD
 - **Scale:** partner anchors across APAC, government pilots, embedding-based fraud detection
 
+## 🔗 Smart Contract & On-Chain Addresses (Stellar Testnet)
+
+BayanFi runs on the **Stellar Testnet**. All addresses below are live and independently verifiable on [stellar.expert](https://stellar.expert/explorer/testnet).
+
+| Component | Address | Explorer |
+|-----------|---------|----------|
+| **Platform master / sponsor account** | `GDI7ZF3BS25FXS4IO2AEJVJJ6RAA72MHEMV53RDIJ4JUXYXQ7HOJHRWX` | [View](https://stellar.expert/explorer/testnet/account/GDI7ZF3BS25FXS4IO2AEJVJJ6RAA72MHEMV53RDIJ4JUXYXQ7HOJHRWX) |
+| **Program funding account (DSWD)** | `GADRQH46TDRW46ZQ2DU2EZFKKUHU3X37GKXBTVWFWAJ6ITJ4UMDEKVJX` | [View](https://stellar.expert/explorer/testnet/account/GADRQH46TDRW46ZQ2DU2EZFKKUHU3X37GKXBTVWFWAJ6ITJ4UMDEKVJX) |
+| **Soroban escrow contract** | `program_escrow` — see [`contracts/program_escrow`](./contracts/program_escrow). Deploy with the steps in that README to obtain the on-chain contract ID (`C...`). | — |
+
+> The master account demonstrates BayanFi's flagship Stellar-native feature — **sponsored reserves**: beneficiary wallets are created with **0 XLM**, with all reserves sponsored by the platform. Open the master account on the explorer and inspect its sponsored sub-entries to verify.
+
 ## 📄 License
 
 MIT — see [LICENSE](./LICENSE).
