@@ -1,7 +1,9 @@
-"""LLM abstraction supporting OpenAI (cloud) and Ollama (local/private).
+"""LLM abstraction supporting OpenAI, Gemini, and Ollama backends.
 
-For government deployments where data must stay on-premise, set USE_OLLAMA=true.
-BayanFi supports both backends with zero code changes — just a config toggle.
+Switch via environment variables:
+  USE_OLLAMA=true          → local Ollama
+  GEMINI_API_KEY=...       → Google Gemini (free tier)
+  OPENAI_API_KEY=...       → OpenAI
 """
 from __future__ import annotations
 
@@ -15,16 +17,65 @@ class LLMService:
     def __init__(self) -> None:
         self.settings = get_settings()
 
-    def _use_ollama(self) -> bool:
-        """Use Ollama if explicitly set, or if no OpenAI key is configured."""
-        return self.settings.use_ollama or not self.settings.openai_api_key
+    def _backend(self) -> str:
+        if self.settings.use_ollama:
+            return "ollama"
+        if self.settings.gemini_api_key:
+            return "gemini"
+        if self.settings.openai_api_key:
+            return "openai"
+        return "fallback"
 
     async def complete(self, system: str, user: str, temperature: float = 0.3) -> str:
-        """Returns a text completion from the configured backend."""
-        if self._use_ollama():
+        backend = self._backend()
+        if backend == "ollama":
             return await self._ollama_complete(system, user, temperature)
-        return await self._openai_complete(system, user, temperature)
+        if backend == "gemini":
+            return await self._gemini_complete(system, user, temperature)
+        if backend == "openai":
+            return await self._openai_complete(system, user, temperature)
+        return self._fallback()
 
+    # ── Gemini ────────────────────────────────────────────────────────
+    async def _gemini_complete(self, system: str, user: str, temperature: float) -> str:
+        """
+        Calls the Google Gemini API (free tier).
+        Uses gemini-1.5-flash — fastest and cheapest on the free tier.
+        """
+        model = self.settings.gemini_model
+        url = (
+            f"https://generativelanguage.googleapis.com/v1beta/models/{model}"
+            f":generateContent?key={self.settings.gemini_api_key}"
+        )
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {"text": f"{system}\n\nUser: {user}"}
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": temperature,
+                "maxOutputTokens": 512,
+            },
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                resp = await client.post(url, json=payload)
+                resp.raise_for_status()
+                data = resp.json()
+                return (
+                    data["candidates"][0]["content"]["parts"][0]["text"].strip()
+                )
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 429:
+                return "The assistant is busy right now. Please try again in a moment."
+            return self._fallback()
+        except Exception:
+            return self._fallback()
+
+    # ── OpenAI ────────────────────────────────────────────────────────
     async def _openai_complete(self, system: str, user: str, temperature: float) -> str:
         headers = {
             "Authorization": f"Bearer {self.settings.openai_api_key}",
@@ -47,11 +98,8 @@ class LLMService:
             resp.raise_for_status()
             return resp.json()["choices"][0]["message"]["content"].strip()
 
+    # ── Ollama ────────────────────────────────────────────────────────
     async def _ollama_complete(self, system: str, user: str, temperature: float) -> str:
-        """
-        Calls the local Ollama API using the /api/chat endpoint (better
-        for multi-turn conversations than /api/generate).
-        """
         payload = {
             "model": self.settings.ollama_model,
             "messages": [
@@ -68,24 +116,22 @@ class LLMService:
                     json=payload,
                 )
                 resp.raise_for_status()
-                data = resp.json()
-                # /api/chat returns { message: { content: "..." } }
-                return data.get("message", {}).get("content", "").strip()
+                return resp.json().get("message", {}).get("content", "").strip()
         except httpx.ConnectError:
-            return (
-                "The AI assistant is starting up. "
-                "Please make sure Ollama is running ('ollama serve') and the model is pulled ('ollama pull mistral')."
-            )
-        except Exception as e:
-            return (
-                f"The assistant is temporarily unavailable ({type(e).__name__}). "
-                "Please try again in a moment."
-            )
+            return "Ollama is not running. Start it with: ollama serve"
+        except Exception:
+            return self._fallback()
+
+    # ── Fallback ──────────────────────────────────────────────────────
+    def _fallback(self) -> str:
+        return (
+            "I can help you with eligibility questions, requirements, and application "
+            "status. Please contact your program administrator for specific details."
+        )
 
     async def complete_json(self, system: str, user: str) -> dict:
-        """Requests a JSON object response and parses it defensively."""
         raw = await self.complete(
-            system + " Respond ONLY with valid minified JSON, no markdown, no explanation.",
+            system + " Respond ONLY with valid minified JSON, no markdown.",
             user,
             temperature=0.0,
         )
