@@ -43,8 +43,8 @@ export default function LandingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 aurora" />
-        <div className="absolute inset-0 grid-overlay opacity-60" />
+        <div className="pointer-events-none absolute inset-0 aurora" />
+        <div className="pointer-events-none absolute inset-0 grid-overlay opacity-60" />
         {/* Floating gradient orbs */}
         <div className="pointer-events-none absolute -left-20 top-20 h-72 w-72 rounded-full bg-primary/20 blur-3xl animate-float" />
         <div className="pointer-events-none absolute -right-16 top-40 h-72 w-72 rounded-full bg-accent/20 blur-3xl animate-float delay-300" />

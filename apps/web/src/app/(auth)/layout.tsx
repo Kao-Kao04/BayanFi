@@ -4,7 +4,7 @@ import { ShieldCheck } from 'lucide-react';
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
-      <div className="absolute inset-0 aurora" />
+      <div className="pointer-events-none absolute inset-0 aurora" />
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <Link href="/" className="flex items-center gap-2">

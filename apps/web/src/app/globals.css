@@ -133,8 +133,9 @@
 }
 
 @layer utilities {
-  /* Animated aurora mesh background */
+  /* Animated aurora mesh background — pointer-events-none so it never blocks clicks */
   .aurora {
+    pointer-events: none;
     background:
       radial-gradient(circle at 15% 20%, hsl(221 83% 53% / 0.18), transparent 45%),
       radial-gradient(circle at 85% 25%, hsl(199 89% 48% / 0.16), transparent 45%),
@@ -145,6 +146,7 @@
 
   /* Subtle dotted grid overlay */
   .grid-overlay {
+    pointer-events: none;
     background-image: radial-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 1px);
     background-size: 28px 28px;
   }
