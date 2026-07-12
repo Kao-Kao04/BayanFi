@@ -10,9 +10,6 @@ import * as bcrypt from 'bcrypt';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { Keypair } from 'stellar-sdk';
-
-// Load the root .env (three levels up from apps/backend/prisma) so the seed
-// works regardless of the cwd it is invoked from.
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 
 const prisma = new PrismaClient();
@@ -153,22 +150,57 @@ async function main() {
     },
   });
 
-  // --- Merchant profile ---
-  await prisma.merchant.upsert({
-    where: { userId: merchantUser.id },
-    update: {},
-    create: {
-      userId: merchantUser.id,
-      businessName: 'Aling Nena Sari-Sari Store',
-      category: MerchantCategory.GROCERY,
-      addressLine1: '45 Mabini St',
-      city: 'Quezon City',
-      province: 'Metro Manila',
-      region: 'NCR',
-      status: MerchantStatus.ACTIVE,
-      verifiedAt: new Date(),
-    },
-  });
+  // --- Merchant profile (idempotent, provision wallet if missing) ---
+  let merchantRecord = await prisma.merchant.findUnique({ where: { userId: merchantUser.id } });
+  if (!merchantRecord) {
+    // Provision a Stellar wallet for the merchant
+    const merchantKp = Keypair.random();
+    await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(merchantKp.publicKey())}`).catch(() => null);
+
+    const merchantWallet = await prisma.wallet.create({
+      data: {
+        userId: merchantUser.id,
+        publicKey: merchantKp.publicKey(),
+        walletType: 'CUSTODIAL',
+        isPrimary: false,
+        label: 'Merchant Wallet',
+        isFunded: true,
+      },
+    });
+
+    await prisma.merchant.create({
+      data: {
+        userId: merchantUser.id,
+        businessName: 'Aling Nena Sari-Sari Store',
+        category: MerchantCategory.GROCERY,
+        addressLine1: '45 Mabini St',
+        city: 'Quezon City',
+        province: 'Metro Manila',
+        region: 'NCR',
+        status: MerchantStatus.ACTIVE,
+        verifiedAt: new Date(),
+        walletId: merchantWallet.id,
+      },
+    });
+  } else if (!merchantRecord.walletId) {
+    // Backfill wallet for existing merchant
+    const merchantKp = Keypair.random();
+    await fetch(`https://friendbot.stellar.org?addr=${encodeURIComponent(merchantKp.publicKey())}`).catch(() => null);
+    const merchantWallet = await prisma.wallet.create({
+      data: {
+        userId: merchantUser.id,
+        publicKey: merchantKp.publicKey(),
+        walletType: 'CUSTODIAL',
+        isPrimary: false,
+        label: 'Merchant Wallet',
+        isFunded: true,
+      },
+    });
+    await prisma.merchant.update({
+      where: { id: merchantRecord.id },
+      data: { walletId: merchantWallet.id },
+    });
+  }
 
   console.log('Seed complete.');
   console.log('Demo login: admin@bayanfi.io / BayanFi@2026 (and dswd.admin, auditor, juan, store)');
