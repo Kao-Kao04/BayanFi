@@ -4,7 +4,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file="../../../.env",  # root .env from apps/ai-service/
+        extra="ignore"
+    )
 
     # Service
     app_name: str = "BayanFi AI Service"
@@ -14,12 +17,11 @@ class Settings(BaseSettings):
     # LLM backends
     openai_api_key: str | None = None
     openai_model: str = "gpt-4-turbo-preview"
-    openai_embedding_model: str = "text-embedding-3-small"
 
-    # Ollama (local/private inference)
+    # Ollama (local — no data leaves the machine, strong privacy pitch)
     ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "llama2"
-    use_ollama: bool = False
+    ollama_model: str = "mistral"
+    use_ollama: bool = True  # default to Ollama; set USE_OLLAMA=false to use OpenAI
 
     # Thresholds
     duplicate_similarity_threshold: float = 0.90

@@ -1,7 +1,7 @@
 """LLM abstraction supporting OpenAI (cloud) and Ollama (local/private).
 
-The abstraction lets sensitive deployments (e.g. government data that must
-stay on-premise) switch to a local Ollama model without code changes.
+For government deployments where data must stay on-premise, set USE_OLLAMA=true.
+BayanFi supports both backends with zero code changes — just a config toggle.
 """
 from __future__ import annotations
 
@@ -15,9 +15,13 @@ class LLMService:
     def __init__(self) -> None:
         self.settings = get_settings()
 
-    async def complete(self, system: str, user: str, temperature: float = 0.2) -> str:
+    def _use_ollama(self) -> bool:
+        """Use Ollama if explicitly set, or if no OpenAI key is configured."""
+        return self.settings.use_ollama or not self.settings.openai_api_key
+
+    async def complete(self, system: str, user: str, temperature: float = 0.3) -> str:
         """Returns a text completion from the configured backend."""
-        if self.settings.use_ollama or not self.settings.openai_api_key:
+        if self._use_ollama():
             return await self._ollama_complete(system, user, temperature)
         return await self._openai_complete(system, user, temperature)
 
@@ -41,35 +45,49 @@ class LLMService:
                 json=payload,
             )
             resp.raise_for_status()
-            data = resp.json()
-            return data["choices"][0]["message"]["content"].strip()
+            return resp.json()["choices"][0]["message"]["content"].strip()
 
     async def _ollama_complete(self, system: str, user: str, temperature: float) -> str:
+        """
+        Calls the local Ollama API using the /api/chat endpoint (better
+        for multi-turn conversations than /api/generate).
+        """
         payload = {
             "model": self.settings.ollama_model,
-            "prompt": f"{system}\n\n{user}",
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
             "stream": False,
             "options": {"temperature": temperature},
         }
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=120) as client:
                 resp = await client.post(
-                    f"{self.settings.ollama_base_url}/api/generate", json=payload
+                    f"{self.settings.ollama_base_url}/api/chat",
+                    json=payload,
                 )
                 resp.raise_for_status()
-                return resp.json().get("response", "").strip()
-        except Exception:
-            # Deterministic fallback keeps the assistant responsive offline.
+                data = resp.json()
+                # /api/chat returns { message: { content: "..." } }
+                return data.get("message", {}).get("content", "").strip()
+        except httpx.ConnectError:
             return (
-                "I'm currently operating in offline mode. For eligibility, "
-                "requirements, and status questions, please check your dashboard "
-                "or contact your program administrator."
+                "The AI assistant is starting up. "
+                "Please make sure Ollama is running ('ollama serve') and the model is pulled ('ollama pull mistral')."
+            )
+        except Exception as e:
+            return (
+                f"The assistant is temporarily unavailable ({type(e).__name__}). "
+                "Please try again in a moment."
             )
 
     async def complete_json(self, system: str, user: str) -> dict:
         """Requests a JSON object response and parses it defensively."""
         raw = await self.complete(
-            system + " Respond ONLY with valid minified JSON.", user, temperature=0.0
+            system + " Respond ONLY with valid minified JSON, no markdown, no explanation.",
+            user,
+            temperature=0.0,
         )
         try:
             start = raw.index("{")

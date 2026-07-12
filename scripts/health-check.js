@@ -184,7 +184,29 @@ async function main() {
     } catch (e) { fail('GET /merchants/me', e.message); }
   }
 
-  // ── 7. FRONTEND ─────────────────────────────────────────────────────
+  // ── 7. OLLAMA ───────────────────────────────────────────────────────
+  console.log('\n── Ollama (local AI) ─────────────────────────────');
+  try {
+    const r = await fetch('http://localhost:11434/api/tags');
+    if (r.ok) {
+      const j = await r.json();
+      const models = (j.models || []).map(m => m.name);
+      if (models.length > 0) {
+        pass(`Ollama running — models: ${models.join(', ')}`);
+        if (!models.some(m => m.includes('mistral'))) {
+          fail('mistral model', 'Not pulled yet — run: ollama pull mistral');
+        } else {
+          pass('mistral model is ready');
+        }
+      } else {
+        fail('Ollama models', 'No models pulled yet — run: ollama pull mistral');
+      }
+    } else { fail('Ollama', `HTTP ${r.status}`); }
+  } catch {
+    fail('Ollama', 'NOT RUNNING — start Ollama app or run: ollama serve');
+  }
+
+  // ── 8. FRONTEND ─────────────────────────────────────────────────────
   console.log('\n── Frontend (localhost:3000) ─────────────────────');
   const webRoutes = [
     ['/', 'Landing page'],
