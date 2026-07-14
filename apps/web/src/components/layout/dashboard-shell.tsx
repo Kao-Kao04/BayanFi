@@ -46,14 +46,21 @@ export function DashboardShell({ title, nav, children }: DashboardShellProps) {
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card/50 backdrop-blur md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-4">
+        <div className="flex h-16 items-center border-b px-4">
           <Link href="/">
             <Image
-              src="/logo-full.png"
+              src="/logo-white.png"
               alt="BayanFi"
               width={130}
               height={40}
-              className="h-8 w-auto object-contain"
+              className="hidden dark:block h-8 w-auto object-contain"
+            />
+            <Image
+              src="/logo-black.png"
+              alt="BayanFi"
+              width={130}
+              height={40}
+              className="block dark:hidden h-8 w-auto object-contain"
             />
           </Link>
         </div>
