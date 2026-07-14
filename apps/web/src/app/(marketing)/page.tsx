@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ShieldCheck,
   Zap,
@@ -57,6 +58,9 @@ export default function LandingPage() {
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
               </span>
               Built for the Stellar APAC Hackathon
+            </div>
+            <div className="flex justify-center mb-6 animate-fade-in-up">
+              <Image src="/logo-full.png" alt="BayanFi" width={280} height={90} className="h-20 w-auto object-contain" priority />
             </div>
             <h1 className="animate-fade-in-up delay-100 text-4xl font-bold tracking-tight sm:text-6xl">
               Transparent Public Money.

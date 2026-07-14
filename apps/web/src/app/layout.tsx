@@ -11,10 +11,15 @@ export const metadata: Metadata = {
   description:
     'BayanFi is an AI-powered public finance platform that lets governments, NGOs, and foundations distribute financial assistance transparently on the Stellar blockchain.',
   keywords: ['Stellar', 'public finance', 'blockchain', 'financial inclusion', 'government'],
+  icons: {
+    icon: '/logo-full.png',
+    apple: '/logo-full.png',
+  },
   openGraph: {
     title: 'BayanFi — Transparent Public Money',
     description: 'Distribute financial assistance transparently on Stellar.',
     type: 'website',
+    images: ['/logo-full.png'],
   },
 };
 

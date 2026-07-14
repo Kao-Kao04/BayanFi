@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { ShieldCheck, LogOut, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -45,13 +46,16 @@ export function DashboardShell({ title, nav, children }: DashboardShellProps) {
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card/50 backdrop-blur md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-6">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-bg">
-            <ShieldCheck className="h-4 w-4 text-white" />
-          </div>
-          <span className="font-bold">
-            Bayan<span className="gradient-text">Fi</span>
-          </span>
+        <div className="flex h-16 items-center gap-2 border-b px-4">
+          <Link href="/">
+            <Image
+              src="/logo-full.png"
+              alt="BayanFi"
+              width={130}
+              height={40}
+              className="h-8 w-auto object-contain"
+            />
+          </Link>
         </div>
         <nav className="flex-1 space-y-1 p-4">
           {nav.map((item) => {
