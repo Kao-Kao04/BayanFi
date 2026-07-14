@@ -46,22 +46,28 @@ export function DashboardShell({ title, nav, children }: DashboardShellProps) {
     <div className="flex min-h-screen">
       {/* Sidebar */}
       <aside className="hidden w-64 flex-col border-r bg-card/50 backdrop-blur md:flex">
-        <div className="flex h-16 items-center border-b px-4">
-          <Link href="/">
-            <Image
-              src="/logo-white.png"
-              alt="BayanFi"
-              width={130}
-              height={40}
-              className="hidden dark:block h-8 w-auto object-contain"
-            />
-            <Image
-              src="/logo-black.png"
-              alt="BayanFi"
-              width={130}
-              height={40}
-              className="block dark:hidden h-8 w-auto object-contain"
-            />
+        <div className="flex h-16 items-center gap-2 border-b px-4">
+          <Link href="/" className="flex items-center gap-2">
+            {/* Shield icon crop — dark mode: white text logo, light: dark text logo */}
+            <div className="relative h-9 w-9 overflow-hidden rounded-lg">
+              <Image
+                src="/logo-black.png"
+                alt="BayanFi"
+                width={100}
+                height={100}
+                className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 h-[48px] w-auto object-contain"
+              />
+              <Image
+                src="/logo-white.png"
+                alt="BayanFi"
+                width={100}
+                height={100}
+                className="block dark:hidden absolute top-0 left-1/2 -translate-x-1/2 h-[48px] w-auto object-contain"
+              />
+            </div>
+            <span className="font-bold text-sm">
+              Bayan<span className="gradient-text">Fi</span>
+            </span>
           </Link>
         </div>
         <nav className="flex-1 space-y-1 p-4">
