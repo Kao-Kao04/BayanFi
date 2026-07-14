@@ -59,9 +59,15 @@ export default function LandingPage() {
               </span>
               Built for the Stellar APAC Hackathon
             </div>
-            <div className="flex justify-center mb-6 animate-fade-in-up">
-              <Image src="/logo-white.png" alt="BayanFi" width={200} height={70} className="hidden dark:block h-16 w-auto object-contain" priority />
-              <Image src="/logo-black.png" alt="BayanFi" width={200} height={70} className="block dark:hidden h-16 w-auto object-contain" priority />
+            <div className="mb-6 flex animate-fade-in-up justify-center">
+              <Image
+                src="/icon.png"
+                alt="BayanFi"
+                width={96}
+                height={96}
+                className="h-24 w-24 object-contain drop-shadow-2xl animate-float"
+                priority
+              />
             </div>
             <h1 className="animate-fade-in-up delay-100 text-4xl font-bold tracking-tight sm:text-6xl">
               Transparent Public Money.

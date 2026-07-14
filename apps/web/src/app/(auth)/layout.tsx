@@ -6,22 +6,19 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden p-4">
       <div className="pointer-events-none absolute inset-0 aurora" />
       <div className="relative w-full max-w-md">
-        <div className="mb-8 flex justify-center">
-          <Link href="/">
-            {/*
-              Auth pages are always dark background.
-              logo-black.png has white text — correct for dark bg.
-            */}
-            <Image
-              src="/logo-black.png"
-              alt="BayanFi"
-              width={160}
-              height={200}
-              className="h-36 w-auto object-contain"
-              priority
-            />
-          </Link>
-        </div>
+        <Link href="/" className="mb-8 flex flex-col items-center gap-3">
+          <Image
+            src="/icon.png"
+            alt="BayanFi"
+            width={72}
+            height={72}
+            className="h-16 w-16 object-contain"
+            priority
+          />
+          <span className="text-2xl font-bold tracking-tight">
+            Bayan<span className="gradient-text">Fi</span>
+          </span>
+        </Link>
         {children}
       </div>
     </div>

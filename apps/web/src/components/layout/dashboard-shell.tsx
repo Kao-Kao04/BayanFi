@@ -48,24 +48,14 @@ export function DashboardShell({ title, nav, children }: DashboardShellProps) {
       <aside className="hidden w-64 flex-col border-r bg-card/50 backdrop-blur md:flex">
         <div className="flex h-16 items-center gap-2 border-b px-4">
           <Link href="/" className="flex items-center gap-2">
-            {/* Shield icon crop — dark mode: white text logo, light: dark text logo */}
-            <div className="relative h-9 w-9 overflow-hidden rounded-lg">
-              <Image
-                src="/logo-black.png"
-                alt="BayanFi"
-                width={100}
-                height={100}
-                className="hidden dark:block absolute top-0 left-1/2 -translate-x-1/2 h-[48px] w-auto object-contain"
-              />
-              <Image
-                src="/logo-white.png"
-                alt="BayanFi"
-                width={100}
-                height={100}
-                className="block dark:hidden absolute top-0 left-1/2 -translate-x-1/2 h-[48px] w-auto object-contain"
-              />
-            </div>
-            <span className="font-bold text-sm">
+            <Image
+              src="/icon.png"
+              alt="BayanFi"
+              width={36}
+              height={36}
+              className="h-8 w-8 object-contain"
+            />
+            <span className="font-bold">
               Bayan<span className="gradient-text">Fi</span>
             </span>
           </Link>
