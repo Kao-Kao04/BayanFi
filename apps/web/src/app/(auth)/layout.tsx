@@ -8,13 +8,21 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="relative w-full max-w-md">
         <div className="mb-8 flex justify-center">
           <Link href="/">
-            {/* Dark bg in auth — always use white logo */}
+            {/* dark background → white logo */}
             <Image
               src="/logo-white.png"
               alt="BayanFi"
               width={180}
               height={60}
-              className="h-14 w-auto object-contain"
+              className="hidden dark:block h-14 w-auto object-contain"
+              priority
+            />
+            <Image
+              src="/logo-black.png"
+              alt="BayanFi"
+              width={180}
+              height={60}
+              className="block dark:hidden h-14 w-auto object-contain"
               priority
             />
           </Link>
